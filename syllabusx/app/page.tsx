@@ -1,69 +1,201 @@
+"use client";
+
 import Image from "next/image";
+import React, { useReducer, useState } from "react";
+import AppShell from "../components/AppShell";
+import PageHeader from "../components/PageHeader";
+import UploadPanel from "../components/UploadPanel";
+import ProgressBanner from "../components/ProgressBanner";
+import TopicChunkCard from "../components/TopicChunkCard";
+import FlashcardGrid from "../components/FlashcardGrid";
+import EmptyState from "../components/EmptyState";
+import Button from "../components/Button";
+
+type CardStatus = "unreviewed" | "known" | "needsReview";
+
+interface Card {
+  id: string;
+  topicId: string;
+  question: string;
+  answer: string;
+  status: CardStatus;
+}
+
+interface Topic {
+  id: string;
+  title: string;
+  cards: Card[];
+}
+
+type State = {
+  topics: Topic[];
+};
+
+type Action =
+  | { type: "setTopics"; topics: Topic[] }
+  | { type: "markKnown"; cardId: string }
+  | { type: "markReview"; cardId: string }
+  | { type: "reset" };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "setTopics":
+      return { topics: action.topics };
+    case "markKnown":
+      return {
+        topics: state.topics.map((t) => ({
+          ...t,
+          cards: t.cards.map((c) => (c.id === action.cardId ? { ...c, status: "known" } : c)),
+        })),
+      };
+    case "markReview":
+      return {
+        topics: state.topics.map((t) => ({
+          ...t,
+          cards: t.cards.map((c) => (c.id === action.cardId ? { ...c, status: "needsReview" } : c)),
+        })),
+      };
+    case "reset":
+      return { topics: [] };
+    default:
+      return state;
+  }
+}
 
 export default function Home() {
+  const [uiState, setUiState] = useState<"idle" | "uploading" | "generating" | "ready" | "error">("idle");
+  const [message, setMessage] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  const [state, dispatch] = useReducer(reducer, { topics: [] });
+
+  async function handleFile(file: File) {
+    setError(undefined);
+    setMessage("Uploading and extracting text...");
+    setUiState("uploading");
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!uploadRes.ok) {
+        const e = await uploadRes.json().catch(() => ({}));
+        throw new Error(e?.error || "Upload failed");
+      }
+
+      const uploadData = await uploadRes.json();
+      const text: string = uploadData?.text || "";
+
+      setUiState("generating");
+      setMessage("Generating flashcards — this may take a moment.");
+
+      const genRes = await fetch("/api/flashcards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!genRes.ok) {
+        const e = await genRes.json().catch(() => ({}));
+        throw new Error(e?.error || "Generation failed");
+      }
+
+      const genData = await genRes.json();
+      const topicsSource = Array.isArray(genData?.topics) ? genData.topics : [];
+
+      const topics: Topic[] = topicsSource.map((t: any, ti: number) => ({
+        id: `topic-${ti}`,
+        title: typeof t.title === "string" ? t.title : `Topic ${ti + 1}`,
+        cards: Array.isArray(t.flashcards)
+          ? t.flashcards.map((f: any, fi: number) => ({
+              id: `card-${ti}-${fi}`,
+              topicId: `topic-${ti}`,
+              question: String(f.question || ""),
+              answer: String(f.answer || ""),
+              status: "unreviewed" as CardStatus,
+            }))
+          : [],
+      }));
+
+      dispatch({ type: "setTopics", topics });
+      setUiState("ready");
+      setMessage(undefined);
+    } catch (err: any) {
+      setError(err?.message || "An unexpected error occurred.");
+      setUiState("error");
+      setMessage(undefined);
+    }
+  }
+
+  function handleKnown(id: string) {
+    dispatch({ type: "markKnown", cardId: id });
+  }
+
+  function handleReview(id: string) {
+    dispatch({ type: "markReview", cardId: id });
+  }
+
+  function handleStartOver() {
+    dispatch({ type: "reset" });
+    setUiState("idle");
+    setMessage(undefined);
+    setError(undefined);
+  }
+
+  const needsReviewTopics = state.topics.filter((t) => t.cards.some((c) => c.status === "needsReview"));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <AppShell>
+      <PageHeader />
+
+      <div className="space-y-6">
+        {uiState === "uploading" || uiState === "generating" ? (
+          <ProgressBanner title={uiState === "uploading" ? "Uploading PDF" : "Generating flashcards"} message={message} />
+        ) : null}
+
+        {uiState === "idle" ? (
+          <UploadPanel onFileSelected={handleFile} />
+        ) : null}
+
+        {uiState === "error" ? (
+          <div className="space-y-3">
+            <div className="text-sm text-red-600">{error}</div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={handleStartOver}>Start Over</Button>
+            </div>
+          </div>
+        ) : null}
+
+        {uiState === "ready" && state.topics.length === 0 ? (
+          <EmptyState title="No flashcards generated" description="The document didn't produce flashcards. Try a different file." />
+        ) : null}
+
+        {uiState === "ready" && state.topics.length > 0 ? (
+          <div className="space-y-6">
+            {state.topics.map((topic) => (
+              <TopicChunkCard key={topic.id} title={topic.title} cards={topic.cards} onKnown={handleKnown} onReview={handleReview} />
+            ))}
+
+            <section className="bg-white border border-gray-100 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">Focus List</h3>
+              {needsReviewTopics.length === 0 ? (
+                <p className="text-sm text-gray-600">No cards marked for review. You're all set!</p>
+              ) : (
+                <ul className="list-disc list-inside text-sm text-gray-700">
+                  {needsReviewTopics.map((t) => (
+                    <li key={t.id}>{t.title} ({t.cards.filter(c => c.status === 'needsReview').length} cards)</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={handleStartOver}>Start Over</Button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </AppShell>
   );
 }
