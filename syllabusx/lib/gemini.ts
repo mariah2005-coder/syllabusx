@@ -39,14 +39,19 @@ function extractTextFromCandidateContent(content: any): string {
 }
 
 function extractJsonString(rawText: string): string {
-  const firstBrace = rawText.indexOf("{");
-  const lastBrace = rawText.lastIndexOf("}");
+  const cleaned = rawText
+    .replace(/```(?:json)?/gi, "")
+    .replace(/\r/g, "")
+    .trim();
+
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
 
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
     throw new Error("Gemini response did not contain valid JSON.");
   }
 
-  return rawText.slice(firstBrace, lastBrace + 1);
+  return cleaned.slice(firstBrace, lastBrace + 1);
 }
 
 function validateFlashcards(topic: any, topicIndex: number): GeneratedTopicChunk {
@@ -85,10 +90,10 @@ export async function generateFlashcards(documentText: string): Promise<Generate
 
   const client = new GoogleGenerativeAI(apiKey);
   const model = client.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-flash-latest",
     generationConfig: {
       responseMimeType: "application/json",
-      maxOutputTokens: 1200,
+      maxOutputTokens: 4096,
     },
   });
 
@@ -113,6 +118,7 @@ export async function generateFlashcards(documentText: string): Promise<Generate
     if (!rawText || !rawText.trim()) {
       throw new Error("Gemini returned empty text.");
     }
+    
 
     const jsonString = extractJsonString(rawText);
     const parsed = JSON.parse(jsonString);
