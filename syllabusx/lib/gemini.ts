@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export interface GeneratedFlashcard {
   question: string;
   answer: string;
+  detail?: string;
 }
 
 export interface GeneratedTopicChunk {
@@ -38,7 +39,7 @@ function extractTextFromCandidateContent(content: any): string {
     .join("");
 }
 
-function extractJsonString(rawText: string): string {
+export function extractJsonString(rawText: string): string {
   const cleaned = rawText
     .replace(/```(?:json)?/gi, "")
     .replace(/\r/g, "")
@@ -54,25 +55,30 @@ function extractJsonString(rawText: string): string {
   return cleaned.slice(firstBrace, lastBrace + 1);
 }
 
-function validateFlashcards(topic: any, topicIndex: number): GeneratedTopicChunk {
+function validateFlashcards(topic: any, topicIndex: number, minFlashcards = 2, maxFlashcards = 3): GeneratedTopicChunk {
   const title = typeof topic?.title === "string" ? topic.title.trim() : "";
   if (!title) {
     throw new Error(`Invalid topic title for topic ${topicIndex + 1}.`);
   }
 
   if (!Array.isArray(topic.flashcards) || topic.flashcards.length === 0) {
-    throw new Error(`Topic "${title}" must include 2-3 flashcards.`);
+    throw new Error(`Topic "${title}" must include between ${minFlashcards}-${maxFlashcards} flashcards.`);
+  }
+
+  if (topic.flashcards.length < minFlashcards || topic.flashcards.length > maxFlashcards) {
+    throw new Error(`Topic "${title}" has ${topic.flashcards.length} flashcards; expected between ${minFlashcards}-${maxFlashcards}.`);
   }
 
   const flashcards = topic.flashcards.map((flashcard: any, flashcardIndex: number) => {
     const question = typeof flashcard?.question === "string" ? flashcard.question.trim() : "";
     const answer = typeof flashcard?.answer === "string" ? flashcard.answer.trim() : "";
+    const detail = typeof flashcard?.detail === "string" && flashcard.detail.trim() ? flashcard.detail.trim() : undefined;
 
     if (!question || !answer) {
       throw new Error(`Flashcard ${flashcardIndex + 1} in topic "${title}" is missing a question or answer.`);
     }
 
-    return { question, answer };
+    return detail ? { question, answer, detail } : { question, answer };
   });
 
   return { title, flashcards };
@@ -93,11 +99,32 @@ export async function generateFlashcards(documentText: string): Promise<Generate
     model: "gemini-flash-latest",
     generationConfig: {
       responseMimeType: "application/json",
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
     },
   });
 
-  const prompt = `You are building simplified study material for neurodivergent students. Convert the document text into structured JSON only. Return 4-6 topic chunks. Each topic chunk should contain a title and 2-3 flashcards. Each flashcard must have a question and an answer. Use this exact JSON shape:\n\n{\n  "topics": [\n    {\n      "title": "...",\n      "flashcards": [\n        { "question": "...", "answer": "..." }\n      ]\n    }\n  ]\n}\n\nDocument text:\n${documentText}`;
+  // Estimate document length
+  const words = documentText.trim().length === 0 ? 0 : documentText.trim().split(/\s+/).filter(Boolean).length;
+
+  // Determine ranges based on size
+  let minTopics = 4;
+  let maxTopics = 6;
+  let minFlashcards = 2;
+  let maxFlashcards = 3;
+
+  if (words >= 1500 && words <= 4000) {
+    minTopics = 8;
+    maxTopics = 12;
+    minFlashcards = 3;
+    maxFlashcards = 4;
+  } else if (words > 4000) {
+    minTopics = 12;
+    maxTopics = 18;
+    minFlashcards = 3;
+    maxFlashcards = 4;
+  }
+
+    const prompt = `You are building simplified study material for neurodivergent students. Convert the document text into structured JSON only. Return between ${minTopics}-${maxTopics} topic chunks. Each topic chunk should contain a title and ${minFlashcards}-${maxFlashcards} flashcards. Each flashcard must include:\n- "question": a concise prompt (short)\n- "answer": a short 1-2 sentence core definition (concise)\n- "detail": OPTIONAL, 2-3 additional sentences with context, example, or elaboration for deeper understanding\nReturn only JSON that matches this exact shape (include the "detail" field when you provide extra context):\n\n{\n  "topics": [\n    {\n      "title": "...",\n      "flashcards": [\n        { "question": "...", "answer": "...", "detail": "... (optional)" }\n      ]\n    }\n  ]\n}\n\nDocument text (approx ${words} words):\n${documentText}`;
 
   try {
     const result = await model.generateContent({
@@ -128,14 +155,29 @@ export async function generateFlashcards(documentText: string): Promise<Generate
       throw new Error("Gemini response JSON did not contain a valid topics array.");
     }
 
-    const topics = topicsSource.map(validateFlashcards);
+    if (topicsSource.length < minTopics || topicsSource.length > maxTopics) {
+      throw new Error(`Gemini returned ${topicsSource.length} topics; expected between ${minTopics} and ${maxTopics}.`);
+    }
+
+    const topics = topicsSource.map((t: any, i: number) => validateFlashcards(t, i, minFlashcards, maxFlashcards));
     if (topics.length === 0) {
       throw new Error("Gemini response contained no valid topic chunks.");
     }
 
     return { topics };
-  } catch (error) {
+  } catch (error: any) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini flashcard generation failed: ${message}`);
+
+    // Detect retryable/service-unavailable errors from the Gemini client
+    const isRetryable =
+      (error && (error.status === 503 || error.code === 503)) || /503|service unavailable|Service Unavailable/i.test(message);
+
+    const wrapped = new Error(`Gemini flashcard generation failed: ${message}`) as any;
+    if (isRetryable) {
+      wrapped.retryable = true;
+      wrapped.status = 503;
+    }
+
+    throw wrapped;
   }
 }

@@ -23,7 +23,13 @@ export async function POST(request: NextRequest) {
     const result = await generateFlashcards(documentText);
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Flashcard generation failed.";
+    const err: any = error;
+    const message = err instanceof Error ? err.message : "Flashcard generation failed.";
+
+    if (err?.retryable) {
+      return NextResponse.json({ error: "Our AI service is briefly busy — please try again in a moment.", retryable: true }, { status: 503 });
+    }
+
     return jsonError(message, 502);
   }
 }

@@ -12,13 +12,13 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onFileSelected }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
       <EmptyState
         title="Upload a PDF syllabus"
-        description="Drop a PDF here or select a file to extract study material into flashcards."
+        description="Select a PDF to convert into focused flashcards. Keep text simple and easy to review."
       />
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="flex flex-col items-start gap-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -38,7 +38,9 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onFileSelected }) => {
           Select PDF
         </Button>
 
-        <p className="text-sm text-gray-500">or drag & drop is supported in future updates.</p>
+        <p className="max-w-xl text-sm leading-6 text-slate-600">
+          One step at a time: choose a file, then wait for the guided flashcard summary.
+        </p>
       </div>
     </div>
   );

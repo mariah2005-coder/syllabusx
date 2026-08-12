@@ -14,11 +14,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center p-8 rounded-md bg-white border border-gray-100">
-      <div className="h-16 w-16 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center gap-4 rounded-3xl bg-slate-50 border border-slate-200 p-10 text-center">
+      <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center">
         {icon ?? (
           <svg
-            className="h-8 w-8 text-sky-400"
+            className="h-8 w-8 text-slate-500"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -29,8 +29,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           </svg>
         )}
       </div>
-      <h3 className="text-lg font-medium text-gray-800">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600 text-center max-w-xs">{description}</p>
+      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+      <p className="max-w-md text-sm leading-7 text-slate-700">{description}</p>
     </div>
   );
 };

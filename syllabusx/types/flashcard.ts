@@ -5,5 +5,6 @@ export interface Flashcard {
   topicId: string;
   question: string;
   answer: string;
+  detail?: string;
   status: FlashcardStatus;
 }

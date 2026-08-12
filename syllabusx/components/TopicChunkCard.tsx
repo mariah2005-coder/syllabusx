@@ -20,13 +20,17 @@ export const TopicChunkCard: React.FC<TopicChunkCardProps> = ({
   onReview,
 }) => {
   return (
-    <section className="bg-gray-50 border border-gray-100 rounded-lg p-4">
-      <header className="mb-3">
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+    <section className="bg-slate-50 border border-slate-100 rounded-3xl p-6 shadow-sm">
+      <header className="mb-4">
+        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
       </header>
 
       <div>
-        {children ? children : cards ? <FlashcardGrid cards={cards} onKnown={onKnown} onReview={onReview} /> : null}
+        {children ? (
+          children
+        ) : cards ? (
+          <FlashcardGrid cards={cards} onKnown={onKnown} onReview={onReview} />
+        ) : null}
       </div>
     </section>
   );
