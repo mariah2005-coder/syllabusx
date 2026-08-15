@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SyllabusX
 
-## Getting Started
+An AI-powered flashcard generator designed for neurodivergent and ADHD 
+students. Upload a syllabus or textbook chapter (PDF), and get organized, 
+digestible topic chunks with flashcards to study more effectively — 
+without the overwhelm of dense academic material.
 
-First, run the development server:
+## Live Demo
+[Your Vercel URL here]
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Setup
+1. Clone this repo
+2. Run `npm install`
+3. Create a `.env.local` file in the root and add:
+GEMINI_API_KEY=your_key_here
+4. Run `npm run dev`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
+- **Next.js App Router** for frontend and API routes
+- **unpdf** for extracting text from uploaded PDFs (chosen after pdf-parse 
+  had compatibility issues with Next.js server environment)
+- **Google Gemini API** (gemini-flash-latest) for generating topic chunks 
+  and flashcards
+- **Tailwind CSS** for styling, with a calm, muted design specifically 
+  chosen for ADHD/neurodivergent users
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## AI Integration
+The app sends extracted PDF text to Gemini with a structured prompt 
+that asks it to break content into digestible topic chunks and generate 
+flashcards for each — with a short core answer plus optional expandable 
+detail. The number of topics/flashcards scales with document length to 
+balance depth and simplicity. This reduces study overwhelm by transforming 
+dense material into manageable, reviewable pieces.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Known Limitations
+- Only PDF uploads are supported (Word/PPT support planned as a future 
+  improvement — users can copy-paste text from these formats currently)
+- Scanned/image-based PDFs are not supported, only text-based PDFs
+- History/progress is not saved between sessions (no user accounts — 
+  planned future improvement)
+- Recommended for single chapters/syllabi rather than entire textbooks
 
-## Learn More
+## Testing
+Run `npm run test` to run unit tests covering JSON extraction logic 
+and the Focus List component.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
+Deployed on Vercel. To redeploy: push to the `main` branch, Vercel 
+auto-deploys.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Rollback plan:** If a deployment breaks, revert the problematic commit 
+and push again, or use Vercel's dashboard to instantly roll back to a 
+previous successful deployment.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Error handling:** The app shows clear, user-facing error messages for 
+invalid PDFs, empty files, oversized files, and AI service failures 
+(including temporary Gemini API unavailability), with a "Start Over" 
+option to recover.
 
-## Deploy on Vercel
+Lighthouse: Desktop 100, Mobile ~78-81 (mobile throttling affects 
+AI-response-dependent pages more than static content)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment Checklist
+- [x] App builds successfully (`npm run build` with no errors)
+- [x] Environment variables configured on Vercel
+- [x] Live URL tested and working
+- [x] Error states tested (invalid file, oversized file, AI failure)
+- [x] Accessibility audit passed (axe DevTools, Lighthouse)
+- [x] Monitoring/rollback: Vercel dashboard used to redeploy previous 
+      version if needed; no external monitoring service set up (acceptable 
+      for this scale of project)
