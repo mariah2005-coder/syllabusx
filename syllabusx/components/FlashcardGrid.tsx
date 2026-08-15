@@ -16,7 +16,7 @@ export const FlashcardGrid: React.FC<FlashcardGridProps> = ({
   onReview,
 }) => {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-stretch">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 items-start auto-rows-min">
       {cards.map((c) => (
         <FlashcardCard key={c.id} card={c} onKnown={onKnown} onReview={onReview} />
       ))}
