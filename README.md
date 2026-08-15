@@ -1,4 +1,13 @@
 # SyllabusX
+## Project Brief
+
+SyllabusX helps neurodivergent and ADHD students who struggle with study 
+overwhelm from long lecture slides and dense syllabi. It's designed for 
+students who find it hard to process large blocks of academic material 
+at once. I chose this idea because breaking dense content into small, 
+digestible, reviewable pieces directly supports how neurodivergent 
+learners process information best — turning a 40-page lecture into a 
+guided study session rather than a wall of text.
 
 An AI-powered flashcard generator designed for neurodivergent and ADHD 
 students. Upload a syllabus or textbook chapter (PDF), and get organized, 
