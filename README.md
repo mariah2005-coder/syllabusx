@@ -57,3 +57,5 @@ invalid PDFs, empty files, oversized files, and AI service failures
 (including temporary Gemini API unavailability), with a "Start Over" 
 option to recover.
 
+> Note: Due to a folder-naming setup, the actual project code is inside 
+> the `syllabusx/` subdirectory of this repository.
