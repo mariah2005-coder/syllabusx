@@ -6,7 +6,7 @@ digestible topic chunks with flashcards to study more effectively —
 without the overwhelm of dense academic material.
 
 ## Live Demo
-[Your Vercel URL here]
+[(https://syllabusx.vercel.app/)]
 
 ## Setup
 1. Clone this repo
@@ -48,7 +48,7 @@ and the Focus List component.
 Deployed on Vercel. To redeploy: push to the `main` branch, Vercel 
 auto-deploys.
 
-**Rollback plan:** If a deployment breaks, revert the problematic commit 
+Rollback plan: If a deployment breaks, revert the problematic commit 
 and push again, or use Vercel's dashboard to instantly roll back to a 
 previous successful deployment.
 
@@ -56,6 +56,29 @@ previous successful deployment.
 invalid PDFs, empty files, oversized files, and AI service failures 
 (including temporary Gemini API unavailability), with a "Start Over" 
 option to recover.
+
+Lighthouse: Desktop 100, Mobile ~78-81 (mobile throttling affects 
+AI-response-dependent pages more than static content)
+
+## Deployment Checklist
+- [x] App builds successfully (`npm run build` with no errors)
+- [x] Environment variables configured on Vercel
+- [x] Live URL tested and working
+- [x] Error states tested (invalid file, oversized file, AI failure)
+- [x] Accessibility audit passed (axe DevTools, Lighthouse)
+- [x] Monitoring/rollback: Vercel dashboard used to redeploy previous 
+      version if needed; no external monitoring service set up (acceptable 
+      for this scale of project)
+## Reflection
+
+**What was hardest, and why?**
+The hardest part was discovering that the app worked perfectly locally but failed to deploy on Vercel — the build kept failing because a dependency (`@google/generative-ai`) was accidentally missing from `package.json`, even though it worked fine in local development. This taught me that "my code works" and "my code will reliably run in a different environment" are two separate things, and deployment is what actually tests that gap.
+
+**What would you do differently next time?**
+I would think through error handling upfront instead of discovering edge cases one at a time — issues like PDF parsing crashes, AI responses getting truncated, and the AI model itself becoming deprecated mid-development were all things I only found out about after they broke something. Next time, I'd map out these failure points before writing the core feature, not after.
+
+**One thing I learned that surprised me:**
+I learned that AI APIs themselves change very quickly, not just my own code. The Gemini model name I was using got deprecated three times during development (`gemini-2.0-flash` → `gemini-2.5-flash` → `gemini-flash-latest`). This taught me that when integrating an external AI service, it's better to use a flexible "latest" alias from the start rather than hardcoding a specific model version, to avoid repeated breaking changes.
 
 > Note: Due to a folder-naming setup, the actual project code is inside 
 > the `syllabusx/` subdirectory of this repository.
