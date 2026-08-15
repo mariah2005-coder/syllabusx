@@ -66,9 +66,21 @@ previous successful deployment.
 invalid PDFs, empty files, oversized files, and AI service failures 
 (including temporary Gemini API unavailability), with a "Start Over" 
 option to recover.
+## Performance & Accessibility Audit
 
-Lighthouse: Desktop 100, Mobile ~78-81 (mobile throttling affects 
-AI-response-dependent pages more than static content)
+**Lighthouse:** Desktop score 100, Mobile score ~78-81 
+**Accessibility (axe DevTools):** 0 issues found
+
+**Concrete improvement made based on audit findings:**
+The initial axe DevTools scan flagged 11 "nested interactive controls" 
+violations on the flashcard screen — the card's reveal action and its 
+action buttons ("I knew this" / "Needs review") were nested in a way 
+that could confuse screen readers. This was fixed by restructuring the 
+card so only one clearly-defined element handles each interactive action, 
+with no nested clickable elements. A follow-up scan then flagged low 
+color-contrast on the "Reveal answer" link text, which was fixed by 
+darkening the link color to meet WCAG AA contrast thresholds. Both 
+fixes brought the audit down to 0 issues.
 
 ## Deployment Checklist
 - [x] App builds successfully (`npm run build` with no errors)
